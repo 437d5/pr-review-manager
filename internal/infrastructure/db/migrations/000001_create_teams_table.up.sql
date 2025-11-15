@@ -1,0 +1,7 @@
+CREATE TABLE teams (
+    id SERIAL PRIMARY KEY,
+    team_name VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_teams_name ON teams (team_name);
