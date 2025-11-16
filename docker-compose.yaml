@@ -6,8 +6,7 @@ services:
       dockerfile: Dockerfile
     container_name: pr-reviewer
     restart: unless-stopped
-    env_file:
-      - env/.env.example
+    env_file: env/.env.example
     ports:
       - "8080:8080"
     depends_on:
@@ -22,8 +21,7 @@ services:
     restart: unless-stopped
     ports:
       - "5432:5432"
-    env_file:
-      - env/.env.example
+    env_file: env/.env.example
     environment:
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_USER=${DB_USER}
