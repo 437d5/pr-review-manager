@@ -8,9 +8,12 @@ import (
 )
 
 type Config struct {
-	Mode    string `env:"MODE" envDefault:"dev"`
-	Address string `env:"REVIEWER_ADDRESS" envDefault:":8080"`
-	DB      DBConfig
+	Mode         string `env:"MODE" envDefault:"dev"`
+	Address      string `env:"REVIEWER_ADDRESS" envDefault:":8080"`
+	ReadTimeout  int    `env:"REVIEWER_READ_TIMEOUT" envDefault:"15"`
+	WriteTimeout int    `env:"REVIEWER_WRITE_TIMEOUT" envDefault:"15"`
+	IdleTimeout  int    `env:"REVIEWER_IDLE_TIMEOUT" envDefault:"60"`
+	DB           DBConfig
 }
 
 type DBConfig struct {

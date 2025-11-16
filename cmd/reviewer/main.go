@@ -2,12 +2,16 @@ package main
 
 import (
 	"context"
-	"log"
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/437d5/pr-review-manager/internal/application/http/handlers"
+	"github.com/437d5/pr-review-manager/internal/application/routers"
 	"github.com/437d5/pr-review-manager/internal/domain/repositories"
 	"github.com/437d5/pr-review-manager/internal/domain/services"
 	"github.com/437d5/pr-review-manager/internal/infrastructure/db"
@@ -39,7 +43,12 @@ func main() {
 
 	// for each request we have instance of UnitOfWork
 	uowFactory := func(ctx context.Context) (repositories.UnitOfWork, error) {
-		return db.NewUnitOfWork(conn), nil
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			return db.NewUnitOfWork(conn), nil
+		}
 	}
 
 	teamService := services.NewTeamService(uowFactory)
@@ -51,19 +60,38 @@ func main() {
 	prService := services.NewPRService(uowFactory)
 	prHandler := handlers.NewPRHandler(prService)
 
-	http.HandleFunc("POST /team/add", teamHandler.CreateTeam)
-	http.HandleFunc("GET /team/get", teamHandler.GetTeam)
-
-	http.HandleFunc("POST /users/setIsActive", userHandler.SetIsActive)
-	http.HandleFunc("GET /users/getReview", userHandler.GetPRs)
-
-	http.HandleFunc("POST /pullRequest/create", prHandler.CreatePR)
-	http.HandleFunc("POST /pullRequest/merge", prHandler.Merge)
-	http.HandleFunc("POST /pullRequest/reassign", prHandler.Reassign)
+	router := routers.InitRouter(
+		teamHandler,
+		userHandler,
+		prHandler,
+	)
 
 	server := &http.Server{
-		Addr: cfg.Address,
+		Addr:         cfg.Address,
+		Handler:      router,
+		ReadTimeout:  time.Duration(cfg.ReadTimeout) * time.Second,
+		WriteTimeout: time.Duration(cfg.WriteTimeout) * time.Second,
+		IdleTimeout:  time.Duration(cfg.IdleTimeout) * time.Second,
 	}
 
-	log.Fatal(server.ListenAndServe())
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	go func() {
+		<-ctx.Done()
+		slog.Debug("shutting down server")
+		if err := server.Shutdown(context.Background()); err != nil {
+			slog.Error("server shutdown failed",
+				"error", err,
+			)
+		}
+	}()
+
+	slog.Info("starting server", "address", cfg.Address)
+	if err := server.ListenAndServe(); err != nil {
+		if !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("server closed unexpectedly", "error", err)
+			return
+		}
+	}
 }
