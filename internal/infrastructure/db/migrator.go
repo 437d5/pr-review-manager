@@ -7,12 +7,21 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/pgx"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	"github.com/jmoiron/sqlx"
 )
 
 //go:embed migrations/*.sql
 var migrationFiles embed.FS
 
-func (db *DB) Migrate() error {
+type Migrator struct {
+	conn *sqlx.DB
+}
+
+func NewMigrator(conn *sqlx.DB) *Migrator {
+	return &Migrator{conn: conn}
+}
+
+func (db *Migrator) Migrate() error {
 	slog.Debug("running migration")
 	files, err := iofs.New(migrationFiles, "migrations")
 	if err != nil {

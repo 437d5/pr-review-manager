@@ -1,5 +1,5 @@
 CREATE TABLE pull_requests_reviewers (
-    id BIGSETIALL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     pull_request_id VARCHAR(255) NOT NULL,
     reviewer_id VARCHAR(255) NOT NULL,
     asigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -11,7 +11,7 @@ CREATE TABLE pull_requests_reviewers (
 
     CONSTRAINT fk_reviewers_user
         FOREIGN KEY (reviewer_id)
-        REFERENCES users(id)
+        REFERENCES users(id),
 
     CONSTRAINT unique_reviewers UNIQUE (pull_request_id, reviewer_id)
 );

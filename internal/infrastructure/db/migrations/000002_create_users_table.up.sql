@@ -8,7 +8,7 @@ CREATE TABLE users(
     CONSTRAINT fk_users_team
         FOREIGN KEY(team_id)
         REFERENCES teams(id)
-        ON DELETE CASCADE,
+        ON DELETE CASCADE
 );
 
 CREATE INDEX idx_users_team_id ON users(team_id);

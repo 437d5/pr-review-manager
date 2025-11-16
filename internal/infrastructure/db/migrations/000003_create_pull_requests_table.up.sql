@@ -2,8 +2,8 @@ CREATE TYPE pr_status AS ENUM ('OPEN', 'MERGED');
 
 CREATE TABLE pull_requests (
     id VARCHAR(255) PRIMARY KEY,
-    name VARCHAR(255) NOT NULL REFERENCES users(id),
-    author_id VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    author_id VARCHAR(255) NOT NULL REFERENCES users(id),
     status  pr_status NOT NULL DEFAULT 'OPEN',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     merged_at TIMESTAMP WITH TIME ZONE NULL,
