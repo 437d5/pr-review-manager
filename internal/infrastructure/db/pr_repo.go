@@ -63,17 +63,21 @@ func (r *PullRequestRepository) Merge(ctx context.Context, ID string) (models.Pu
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.PullRequest{}, models.ErrPullRequestNotFound
 		}
-		slog.Error("cannot merge pull request", "error", err.Error(), "id", ID)
+		slog.Error("cannot merge pull request", "error", err, "id", ID)
 		return models.PullRequest{}, err
 	}
 
 	// need to refactor
 	reviewers, err := r.GetReviewers(ctx, ID)
 	if err != nil {
-		slog.Error("cannot get reviewers", "error", err.Error(), "id", ID)
+		slog.Error("cannot get reviewers", "error", err, "id", ID)
 	}
 
-	pr := prDTO.ToDomain()
+	pr, err := prDTO.ToDomain()
+	if err != nil {
+		slog.Error("cannot convert to domain")
+		return models.PullRequest{}, err
+	}
 
 	pr.AssignedReviewers = make([]string, len(reviewers))
 	for i, reviewer := range reviewers {
@@ -105,7 +109,7 @@ func (r *PullRequestRepository) GetReviewers(ctx context.Context, ID string) ([]
 		if errors.Is(err, sql.ErrNoRows) {
 			return []models.User{}, nil
 		} else {
-			slog.Error("cannot get PR reviewers", "error", err.Error(), "id", ID)
+			slog.Error("cannot get PR reviewers", "error", err, "id", ID)
 			return []models.User{}, err
 		}
 	}
@@ -119,30 +123,22 @@ func (r *PullRequestRepository) GetReviewers(ctx context.Context, ID string) ([]
 }
 
 func (r *PullRequestRepository) Reassign(ctx context.Context, prID, oldReviewerID, newReviewerID string) (models.PullRequest, error) {
-	const deleteQuery = `
-		DELETE FROM pull_requests_reviewers
-		WHERE pull_request_id = $1 AND reviewer_id = $2
+	const query = `
+		UPDATE pull_requests_reviewers
+		SET reviewer_id = $1
+		WHERE pull_request_id = $2 AND reviewer_id = $3
+		RETURNING pull_request_id
 	`
 
-	_, err := r.db.ExecContext(ctx, deleteQuery, prID, oldReviewerID)
+	_, err := r.db.ExecContext(ctx, query, newReviewerID, prID, oldReviewerID)
 	if err != nil {
-		slog.Error("cannot remove old reviewer", "error", err.Error(), "pr_id", prID, "reviewer_id", oldReviewerID)
-		return models.PullRequest{}, err
-	}
-
-	const insertQuery = `
-		INSERT INTO pull_requests_reviewers (pull_request_id, reviewer_id)
-		VALUES ($1, $2)
-	`
-
-	_, err = r.db.ExecContext(ctx, insertQuery, prID, newReviewerID)
-	if err != nil {
-		slog.Error("cannot assign new reviewer", "error", err.Error(), "pr_id", prID,
-			"reviewer_id", newReviewerID, "new_reviewer_id", newReviewerID, "old_reviewer_id", oldReviewerID)
+		slog.Error("cannot assign new reviewer", "error", err, "pr_id", prID,
+			"reviewer_id", newReviewerID, "old_reviewer_id", oldReviewerID)
 		return models.PullRequest{}, err
 	}
 
 	return r.GetByID(ctx, prID)
+
 }
 
 func (r *PullRequestRepository) GetPRs(ctx context.Context, userID string) ([]models.PullRequest, error) {
@@ -166,13 +162,13 @@ func (r *PullRequestRepository) GetPRs(ctx context.Context, userID string) ([]mo
 		if errors.Is(err, sql.ErrNoRows) {
 			return []models.PullRequest{}, nil
 		}
-		slog.Error("cannot get pull requests for user", "error", err.Error(), "user_id", userID)
+		slog.Error("cannot get pull requests for user", "error", err, "user_id", userID)
 		return []models.PullRequest{}, err
 	}
 
 	prs := make([]models.PullRequest, len(prDTOs))
 	for i, dto := range prDTOs {
-		prs[i] = dto.ToDomain()
+		prs[i], _ = dto.ToDomain()
 	}
 
 	return prs, nil
@@ -197,16 +193,20 @@ func (r *PullRequestRepository) GetByID(ctx context.Context, ID string) (models.
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.PullRequest{}, models.ErrPullRequestNotFound
 		}
-		slog.Error("cannot get pull request", "error", err.Error(), "pr_id", ID)
+		slog.Error("cannot get pull request", "error", err, "pr_id", ID)
 		return models.PullRequest{}, err
 	}
 
 	reviewers, err := r.GetReviewers(ctx, ID)
 	if err != nil {
-		slog.Error("cannot get reviewers", "error", err.Error(), "id", ID)
+		slog.Error("cannot get reviewers", "error", err, "id", ID)
 	}
 
-	pr := prDTO.ToDomain()
+	pr, err := prDTO.ToDomain()
+	if err != nil {
+		slog.Error("cannot convert to domain")
+		return models.PullRequest{}, err
+	}
 
 	pr.AssignedReviewers = make([]string, len(reviewers))
 	for i, reviewer := range reviewers {

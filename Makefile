@@ -6,13 +6,13 @@ up:
 	${container_runtime} compose --env-file ./env/.env.example up --build -d 
 
 up-dev:
-	${container_runtime} compose --profile dev up --build -d
+	${container_runtime} compose --env-file ./env/.env.example --profile dev up --build -d
 
 down:
 	${container_runtime} compose down
 
 clean:
-	${container_runtime} compose down -v
+	${container_runtime} compose --env-file ./env/.env.example --profile dev down -v
 
 lint:
 	golangci-lint run -v ./...

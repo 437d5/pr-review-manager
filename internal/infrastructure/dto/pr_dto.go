@@ -2,7 +2,7 @@ package dto
 
 import (
 	"database/sql"
-	"log/slog"
+	"fmt"
 	"time"
 
 	"github.com/437d5/pr-review-manager/internal/domain/models"
@@ -17,7 +17,7 @@ type PullRequestDTO struct {
 	MergedAt  sql.NullTime `db:"merged_at"`
 }
 
-func (pr PullRequestDTO) ToDomain() models.PullRequest {
+func (pr PullRequestDTO) ToDomain() (models.PullRequest, error) {
 	var status models.PRStatus
 	switch pr.Status {
 	case string(models.PRStatusOpen):
@@ -25,7 +25,7 @@ func (pr PullRequestDTO) ToDomain() models.PullRequest {
 	case string(models.PRStatusMerged):
 		status = models.PRStatusMerged
 	default:
-		slog.Warn("unknow status")
+		return models.PullRequest{}, fmt.Errorf("unknown PR status: %s", pr.Status)
 	}
 
 	domainPR := models.PullRequest{
@@ -40,5 +40,5 @@ func (pr PullRequestDTO) ToDomain() models.PullRequest {
 		domainPR.MergedAt = &mergedAtStr
 	}
 
-	return domainPR
+	return domainPR, nil
 }

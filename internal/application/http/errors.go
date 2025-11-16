@@ -1,5 +1,11 @@
 package http
 
+import (
+	"encoding/json"
+	"log/slog"
+	"net/http"
+)
+
 type Error struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
@@ -52,3 +58,18 @@ var (
 		},
 	}
 )
+
+func WriteError(w http.ResponseWriter, status int, errResp ErrorResponse) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	err := json.NewEncoder(w).Encode(errResp)
+	if err != nil {
+		slog.Error("failed to write error response", "error", err.Error())
+		return
+	}
+}
+
+func WriteInernalError(w http.ResponseWriter, err error) {
+	slog.Error("internal server error", "error", err)
+	http.Error(w, "Internal server error", http.StatusInternalServerError)
+}

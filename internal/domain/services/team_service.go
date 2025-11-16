@@ -32,17 +32,6 @@ func (s *TeamService) CreateTeam(ctx context.Context, team models.Team) (models.
 	}
 	defer uow.Close()
 
-	// no need in transaction to check if team exists
-	exists, err := uow.Teams().Exists(ctx, team.Name)
-	if err != nil {
-		slog.Error("cannot check team existence", "error", err.Error(), "team", team.Name)
-		return models.Team{}, err
-	}
-	if exists {
-		return models.Team{}, models.ErrTeamExists
-	}
-
-	// if team not exist begin transaction
 	if err := uow.Begin(ctx); err != nil {
 		slog.Error("cannot begin transaction", "error", err.Error())
 		return models.Team{}, err
@@ -50,6 +39,15 @@ func (s *TeamService) CreateTeam(ctx context.Context, team models.Team) (models.
 
 	var resTeam models.Team
 	err = func() error {
+		exists, err := uow.Teams().Exists(ctx, team.Name)
+		if err != nil {
+			slog.Error("cannot check team existence", "error", err.Error(), "team", team.Name)
+			return err
+		}
+		if exists {
+			return models.ErrTeamExists
+		}
+
 		createdTeamID, err := uow.Teams().Create(ctx, team)
 		if err != nil {
 			slog.Error("cannot create team", "error", err.Error(), "team", team.Name)

@@ -2,7 +2,7 @@ CREATE TABLE pull_requests_reviewers (
     id BIGSERIAL PRIMARY KEY,
     pull_request_id VARCHAR(255) NOT NULL,
     reviewer_id VARCHAR(255) NOT NULL,
-    asigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_reviewers_pull_request
         FOREIGN KEY (pull_request_id)
@@ -17,4 +17,4 @@ CREATE TABLE pull_requests_reviewers (
 );
 
 CREATE INDEX idx_pr_reviewer_pull_request_id ON pull_requests_reviewers (pull_request_id);
-CREATE INDEX idx_pr_reviewer_reviewer_id ON pull_requests_reviewers (reviewer_id);
+CREATE INDEX idx_pr_reviewers_reviewer_pr ON pull_requests_reviewers (reviewer_id, pull_request_id);

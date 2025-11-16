@@ -45,13 +45,11 @@ func (h *TeamHandler) CreateTeam(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch err {
 		case models.ErrTeamExists:
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(httpErr.ErrTeamExists)
+			httpErr.WriteError(w, http.StatusBadRequest, httpErr.ErrTeamExists)
 		case models.ErrTeamNameEmpty, models.ErrTeamMembersEmpty:
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		default:
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			httpErr.WriteInernalError(w, err)
 		}
 		return
 	}
@@ -60,7 +58,10 @@ func (h *TeamHandler) CreateTeam(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(TeamResponse{Team: createdTeam})
+	err = json.NewEncoder(w).Encode(TeamResponse{Team: createdTeam})
+	if err != nil {
+		slog.Error("failed to encode response", "error", err)
+	}
 }
 
 func (h *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {
@@ -72,12 +73,9 @@ func (h *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {
 		case models.ErrTeamNameEmpty:
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		case models.ErrTeamNotFound:
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(httpErr.ErrNotFound)
+			httpErr.WriteError(w, http.StatusNotFound, httpErr.ErrNotFound)
 		default:
-			slog.Error("failed get team", "error", err.Error(), "team_name", teamName)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			httpErr.WriteInernalError(w, err)
 		}
 		return
 	}
@@ -86,7 +84,10 @@ func (h *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(TeamResponse{Team: team})
+	err = json.NewEncoder(w).Encode(TeamResponse{Team: team})
+	if err != nil {
+		slog.Error("cannot encode response", "error", err, "team", team.Name)
+	}
 }
 
 func hideTeamName(team models.Team) models.Team {

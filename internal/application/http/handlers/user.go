@@ -42,19 +42,22 @@ func (h *UserHandler) SetIsActive(w http.ResponseWriter, r *http.Request) {
 		case models.ErrEmptyUserID:
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		case models.ErrUserNotFound:
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(httpErr.ErrNotFound)
+			httpErr.WriteError(w, http.StatusNotFound, httpErr.ErrNotFound)
 		default:
-			slog.Error("failed to set user active status", "error", err.Error(), "user_id", req.UserID, "is_active", req.IsActive)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			httpErr.WriteInernalError(w, err)
 		}
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(UserResponse{User: updatedUser})
+	err = json.NewEncoder(w).Encode(UserResponse{User: updatedUser})
+	if err != nil {
+		slog.Error("failed to encode response", "error", err,
+			"user_id", req.UserID,
+			"is_active", req.IsActive,
+		)
+	}
 }
 
 type GetPRsResponse struct {
@@ -67,8 +70,7 @@ func (h *UserHandler) GetPRs(w http.ResponseWriter, r *http.Request) {
 
 	prs, err := h.userService.GetPRs(r.Context(), userID)
 	if err != nil {
-		slog.Error("failed to get PRs", "error", err.Error(), "user_id", userID)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		httpErr.WriteInernalError(w, err)
 		return
 	}
 
@@ -76,10 +78,15 @@ func (h *UserHandler) GetPRs(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(GetPRsResponse{
+	err = json.NewEncoder(w).Encode(GetPRsResponse{
 		UserID: userID,
 		PRs:    prs,
 	})
+	if err != nil {
+		slog.Error("failed to encode response", "error", err,
+			"user_id", userID,
+		)
+	}
 }
 
 func hideMergeAt(prs []models.PullRequest) []models.PullRequest {

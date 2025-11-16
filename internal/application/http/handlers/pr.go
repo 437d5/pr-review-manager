@@ -49,15 +49,11 @@ func (h *PRHandler) CreatePR(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch err {
 		case models.ErrUserNotFound, models.ErrTeamNotFound:
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(httpErr.ErrNotFound)
+			httpErr.WriteError(w, http.StatusNotFound, httpErr.ErrNotFound)
 		case models.ErrPullRequestExists:
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusConflict)
-			json.NewEncoder(w).Encode(httpErr.ErrPRExists)
+			httpErr.WriteError(w, http.StatusConflict, httpErr.ErrPRExists)
 		default:
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			httpErr.WriteInernalError(w, err)
 		}
 		return
 	}
@@ -85,15 +81,11 @@ func (h *PRHandler) Merge(w http.ResponseWriter, r *http.Request) {
 	mergedPR, err := h.prService.Merge(r.Context(), req.ID)
 	if err != nil {
 		if errors.Is(err, models.ErrPullRequestNotFound) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(httpErr.ErrNotFound)
-			return
+			httpErr.WriteError(w, http.StatusNotFound, httpErr.ErrNotFound)
 		} else if !errors.Is(err, models.ErrPullRequestAlreadyMerged) {
-			slog.Error("failed to merge pr", "error", err.Error())
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
+			httpErr.WriteInernalError(w, err)
 		}
+		return
 	}
 
 	res := PRResponse{PullRequest: mergedPR}
@@ -130,24 +122,15 @@ func (h *PRHandler) Reassign(w http.ResponseWriter, r *http.Request) {
 		case models.ErrEmptyUserID, models.ErrPullRequestIDEmpty:
 			http.Error(w, "Invalid request", http.StatusBadRequest)
 		case models.ErrPullRequestNotFound, models.ErrUserNotFound:
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(httpErr.ErrNotFound)
+			httpErr.WriteError(w, http.StatusNotFound, httpErr.ErrNotFound)
 		case models.ErrPullRequestAlreadyMerged:
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusConflict)
-			json.NewEncoder(w).Encode(httpErr.ErrCannotChangeAfterMerge)
+			httpErr.WriteError(w, http.StatusConflict, httpErr.ErrCannotChangeAfterMerge)
 		case models.ErrUserNotReviewer:
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusConflict)
-			json.NewEncoder(w).Encode(httpErr.ErrUserWasNotAssigned)
+			httpErr.WriteError(w, http.StatusConflict, httpErr.ErrUserWasNotAssigned)
 		case models.ErrNoCandidateToReassign:
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusConflict)
-			json.NewEncoder(w).Encode(httpErr.ErrNoCandidate)
+			httpErr.WriteError(w, http.StatusConflict, httpErr.ErrNoCandidate)
 		default:
-			slog.Error("failed to reassign pr", "error", err.Error())
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			httpErr.WriteInernalError(w, err)
 		}
 		return
 	}
