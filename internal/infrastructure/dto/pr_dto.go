@@ -2,10 +2,14 @@ package dto
 
 import (
 	"database/sql"
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/437d5/pr-review-manager/internal/domain/models"
+)
+
+var (
+	ErrInvalidStatus = errors.New("invalid PR status")
 )
 
 type PullRequestDTO struct {
@@ -25,7 +29,7 @@ func (pr PullRequestDTO) ToDomain() (models.PullRequest, error) {
 	case string(models.PRStatusMerged):
 		status = models.PRStatusMerged
 	default:
-		return models.PullRequest{}, fmt.Errorf("unknown PR status: %s", pr.Status)
+		return models.PullRequest{}, ErrInvalidStatus
 	}
 
 	domainPR := models.PullRequest{
@@ -38,6 +42,8 @@ func (pr PullRequestDTO) ToDomain() (models.PullRequest, error) {
 	if pr.MergedAt.Valid {
 		mergedAtStr := pr.MergedAt.Time.Format(time.RFC3339)
 		domainPR.MergedAt = &mergedAtStr
+	} else {
+		domainPR.MergedAt = nil
 	}
 
 	return domainPR, nil
