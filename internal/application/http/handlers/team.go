@@ -1,20 +1,25 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 
 	httpErr "github.com/437d5/pr-review-manager/internal/application/http"
 	"github.com/437d5/pr-review-manager/internal/domain/models"
-	"github.com/437d5/pr-review-manager/internal/domain/services"
 )
 
-type TeamHandler struct {
-	teamService *services.TeamService
+type TeamService interface {
+	CreateTeam(ctx context.Context, team models.Team) (models.Team, error)
+	GetTeam(ctx context.Context, name string) (models.Team, error)
 }
 
-func NewTeamHandler(teamService *services.TeamService) *TeamHandler {
+type TeamHandler struct {
+	teamService TeamService
+}
+
+func NewTeamHandler(teamService TeamService) *TeamHandler {
 	return &TeamHandler{
 		teamService: teamService,
 	}

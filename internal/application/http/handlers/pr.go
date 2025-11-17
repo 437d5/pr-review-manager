@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -8,17 +9,21 @@ import (
 
 	httpErr "github.com/437d5/pr-review-manager/internal/application/http"
 	"github.com/437d5/pr-review-manager/internal/domain/models"
-	"github.com/437d5/pr-review-manager/internal/domain/services"
 )
 
-type PRHandler struct {
-	prService *services.PRService
+// PRService describes the subset of PR-related operations used by PRHandler.
+type PRService interface {
+	CreatePR(ctx context.Context, pr models.PullRequest) (models.PullRequest, error)
+	Merge(ctx context.Context, id string) (models.PullRequest, error)
+	ReassignReviewer(ctx context.Context, prID, oldReviewerID string) (models.PullRequest, string, error)
 }
 
-func NewPRHandler(prService *services.PRService) *PRHandler {
-	return &PRHandler{
-		prService: prService,
-	}
+type PRHandler struct {
+	prService PRService
+}
+
+func NewPRHandler(prService PRService) *PRHandler {
+	return &PRHandler{prService: prService}
 }
 
 type CreatePRRequest struct {

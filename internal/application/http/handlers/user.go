@@ -1,20 +1,25 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 
 	httpErr "github.com/437d5/pr-review-manager/internal/application/http"
 	"github.com/437d5/pr-review-manager/internal/domain/models"
-	"github.com/437d5/pr-review-manager/internal/domain/services"
 )
 
-type UserHandler struct {
-	userService *services.UserService
+type UserService interface {
+	SetIsActive(ctx context.Context, userID string, isActive bool) (models.User, error)
+	GetPRs(ctx context.Context, userID string) ([]models.PullRequest, error)
 }
 
-func NewUserHandler(userService *services.UserService) *UserHandler {
+type UserHandler struct {
+	userService UserService
+}
+
+func NewUserHandler(userService UserService) *UserHandler {
 	return &UserHandler{
 		userService: userService,
 	}
