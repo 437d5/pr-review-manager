@@ -10,6 +10,10 @@ func (t Team) Validate() error {
 		return ErrTeamNameEmpty
 	}
 
+	if t.Members == nil {
+		return ErrTeamMembersEmpty
+	}
+
 	if len(t.Members) == 0 {
 		return ErrTeamMembersEmpty
 	}
